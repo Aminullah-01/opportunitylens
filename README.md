@@ -51,11 +51,11 @@ python3 --version
 
 If `python3-venv` or `virtualenv` is not yet installed:
 ```bash
-# If you have sudo access:
-sudo apt update && sudo apt install -y python3-venv python3-pip
+# Option A: If you have sudo access:
+sudo apt update && sudo apt install -y python3.12-venv python3-pip
 
-# Or install virtualenv for your user:
-pip install --user virtualenv
+# Option B: If you do NOT have sudo access (avoids externally managed environment error):
+python3 -m pip install --user --break-system-packages virtualenv
 ```
 
 ### 2. Clone the Repository
@@ -68,11 +68,11 @@ cd opportunitylens
 ### 3. Create and Activate a Virtual Environment
 
 ```bash
-# Using python3 -m venv:
+# If python3.12-venv is installed via apt:
 python3 -m venv .venv
 
-# Or using virtualenv:
-virtualenv .venv
+# Or using virtualenv (recommended if apt install is not available):
+python3 -m virtualenv .venv
 
 # Activate the virtual environment:
 source .venv/bin/activate
