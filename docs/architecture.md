@@ -17,9 +17,9 @@ This project is built iteratively across distinct phases to demonstrate:
 
 ---
 
-## 2. Phase 1 Architecture (Current State)
+## 2. Phase 2 Architecture (Current State)
 
-Phase 1 establishes the user interface foundation, testing harness, and clean project configuration without prematurely introducing network dependencies or database credentials.
+Phase 2 connects the application directly to the Snowflake data warehouse (`OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`), establishing the live data-access layer with connection pooling, caching, error sanitization, and automated fallback handling.
 
 ### Component Overview
 
@@ -27,16 +27,21 @@ Phase 1 establishes the user interface foundation, testing harness, and clean pr
 graph TD
     User([Student / Applicant]) -->|Browser HTTP / WebSocket| StreamlitUI[Streamlit Application app.py]
     
-    subgraph Phase 1 Foundation
-        StreamlitUI --> Config[Configuration Module src/config.py]
+    subgraph UI & Caching Layer
+        StreamlitUI --> Cache[@st.cache_data TTL 300s]
+        Cache --> DBModule[Snowflake Access src/db.py]
+        StreamlitUI --> Utils[Helper Utilities src/utils.py]
         StreamlitUI --> DemoData[Demo Data & Business Logic src/demo_data.py]
+        StreamlitUI --> Config[Configuration Module src/config.py]
         Config --> EnvFile[.env / Environment Variables]
     end
 
-    subgraph Future Phase 2 & 3
-        SnowflakeConn[(Snowflake Data Warehouse)] -.->|Phase 2| SnowflakeConnector[Snowflake Python Connector]
+    subgraph Data Warehouse Layer
+        DBModule -->|fetch_opportunities| SnowflakeConn[(Snowflake OPPORTUNITYLENS_DB)]
+    end
+
+    subgraph Future Phase 3
         SnowflakeCoCo[Snowflake CoCo SQL Engine] -.->|Phase 3 Pipeline| SnowflakeConn
-        SnowflakeConnector -.-> StreamlitUI
     end
 
     subgraph Future Phase 4
@@ -45,12 +50,15 @@ graph TD
     end
 ```
 
-### Modules in Phase 1
+### Modules in Phase 2
 
-- **`app.py`**: Streamlit frontend implementing the blue-and-white accessible UI, search and filtering controls, opportunity cards, preview metrics, and placeholder sections for AI and analytics.
-- **`src/config.py`**: Centralized configuration loader powered by `python-dotenv`. It safely loads configuration constants while keeping Snowflake and AI credentials isolated until their respective implementation phases.
-- **`src/demo_data.py`**: Fictional, clearly labelled sample dataset modeling the target Snowflake schema. Contains pure, decoupled Python functions (`filter_opportunities`, `get_demo_metrics`) that can be tested in isolation without a running Streamlit server.
-- **`tests/test_demo_data.py`**: Pytest test suite validating data integrity, required fields, canonical categories and statuses, sample data disclosures, search querying, and combined filtering.
+- **`app.py`**: Streamlit frontend implementing the blue-and-white accessible UI, search and filtering controls, live opportunity cards, live metrics, and placeholder sections for AI and analytics.
+- **`src/db.py`**: Snowflake data-access layer utilizing `snowflake.connector` and `DictCursor` to query `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`. Implements `get_application_status()` to derive open/closing/closed status dynamically from deadlines.
+- **`src/utils.py`**: Testable helper functions for URL validation, date formatting, category derivation from active records, and metric aggregation.
+- **`src/config.py`**: Centralized configuration loader powered by `python-dotenv`.
+- **`src/demo_data.py`**: Fictional preview dataset, schema validation, and pure filter business logic.
+- **`tests/test_demo_data.py`**: Pytest test suite validating demo data integrity and filtering logic.
+- **`tests/test_snowflake_integration.py`**: Pytest suite validating deadline parsing, URL safety, date formatting, and live record filtering.
 
 ---
 
@@ -78,12 +86,14 @@ The Phase 1 in-memory schema is structured to map directly to the target Snowfla
 
 ## 4. Planned Integrations
 
-### Phase 2: Snowflake Connection & Open Dataset
-- Connect using `snowflake-connector-python`.
-- Provision an open, freely accessible dataset detailing educational opportunities and tech programs relevant to Nigeria and West Africa.
-- Implement a Snowflake repository service layer (`src/snowflake_client.py`) that executes read queries and falls back gracefully to cached or sample records on connection errors.
+### Phase 2: Snowflake Integration (Completed)
+- Connected using `snowflake-connector-python` with `DictCursor`.
+- Implemented `src/db.py` to query `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`.
+- Integrated cached data loading (`@st.cache_data(ttl=300)`) in `app.py` with refresh controls and error sanitization.
+- Derived application status dynamically from deadlines and separated it from the database verification status.
+- Added empty-state handling distinguishing successful queries returning zero rows from connection failures.
 
-### Phase 3: Snowflake CoCo Pipeline & Analytics
+### Phase 3: Real Opportunity Data & Snowflake CoCo Analytics (Upcoming)
 - Leverage **Snowflake CoCo** (Cortex Code / Snowflake's intelligent assistant) to:
   - Generate optimized aggregation queries for opportunity metrics and regional distribution.
   - Formulate SQL data transformations for clean deduplication and status categorization (`Closing Soon` triggers).

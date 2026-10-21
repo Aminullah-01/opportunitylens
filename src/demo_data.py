@@ -167,11 +167,11 @@ def filter_opportunities(
         filtered = [
             opp
             for opp in filtered
-            if q in opp.get("title", "").lower()
-            or q in opp.get("organization", "").lower()
-            or q in opp.get("description", "").lower()
-            or q in opp.get("location", "").lower()
-            or q in opp.get("eligibility", "").lower()
+            if q in (opp.get("title") or "").lower()
+            or q in (opp.get("organization") or "").lower()
+            or q in (opp.get("description") or "").lower()
+            or q in (opp.get("location") or "").lower()
+            or q in (opp.get("eligibility") or "").lower()
         ]
 
     return filtered

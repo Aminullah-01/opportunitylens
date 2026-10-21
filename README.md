@@ -9,21 +9,16 @@ This project is built for the **Hacktoberfest Hack Day Gombe** competition under
 
 ---
 
-## 📌 Phase 1 Capabilities
+## 📌 Current Capabilities (Phase 2: Snowflake Integration)
 
-In **Phase 1: Project Foundation**, we focus on building a robust, maintainable architecture, a responsive user interface, and an automated test suite before integrating external cloud services:
-
-- **Branded Interface:** Professional blue-and-white visual identity with responsive typography and accessible contrast.
-- **Opportunity Explorer:** Real-time keyword search and category filtering across scholarships, internships, training programs, hackathons, and entry-level roles.
-- **Detailed Opportunity Cards:** Display of key metadata including organization, location, eligibility requirements, application deadlines, and direct source links.
-- **Dashboard Metrics:** Aggregate counts displaying total records across opportunity types (clearly badged as preview figures).
-- **AI Assistant Placeholder:** Clean preview interface explaining upcoming eligibility matching and grounded recommendations in Phase 4.
-- **Snowflake Analytics Placeholder:** Dedicated section demonstrating upcoming aggregation charts and data pipeline roadmaps.
-- **Fictional Demo Dataset:** Clearly marked sample records representing realistic opportunities in Nigeria without presenting fabricated data as real.
-- **Automated Tests:** Comprehensive Pytest suite validating schema definitions, filtering business logic, and configuration loading.
-
-> [!WARNING]
-> **Data Transparency Notice:** All opportunity records and statistics currently shown in Phase 1 are **fictional sample examples** created solely for user interface evaluation and automated testing. Live Snowflake database integration and live AI inference are implemented in subsequent phases.
+- **Live Snowflake Integration:** Connects directly to Snowflake table `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES` via `src/db.py` using `snowflake-connector-python`.
+- **Cached Data Access:** Leverages Streamlit caching (`@st.cache_data(ttl=300)`) with manual refresh controls to avoid reconnecting on each user interaction.
+- **Graceful Empty State Handling:** Accurately distinguishes between a successful connection returning zero rows (`Connected — no opportunity records`) and connection failures (`Unavailable`).
+- **Dynamic Application Status:** Automatically derives application lifecycle status (`Open`, `Closing Soon`, `Closed`, `Unknown`) from deadlines, and displays verification status (`✓ Verified` / `Status: UNVERIFIED`) separately.
+- **Dynamic Category Filtering:** Derives category filter options directly from the active opportunity dataset.
+- **Safe Link Handling:** Validates external source links before rendering clickable URLs.
+- **Preview Fallback Toggle:** Allows reviewers to preview sample records when the live database contains 0 records.
+- **Automated Test Suite:** 20 comprehensive unit tests covering demo data, live Snowflake data structures, date/status parsing, URL validation, and category derivation.
 
 ---
 
@@ -132,14 +127,17 @@ This tests:
 
 ## 🗺️ Project Roadmap & Hackathon Plan
 
-- [x] **Phase 1: Project Foundation** *(Current)*
+- [x] **Phase 1: Project Foundation** *(Completed)*
   - Streamlit UI explorer and responsive cards.
   - Testable filtering and search engine.
   - Safe configuration management and documentation.
-- [ ] **Phase 2: Snowflake Connection & Open Dataset**
-  - Connect `snowflake-connector-python`.
-  - Ingest and host an open, freely accessible dataset of educational and tech opportunities in Nigeria.
-- [ ] **Phase 3: Snowflake CoCo SQL Pipeline & Analytics**
+- [x] **Phase 2: Snowflake Integration** *(Completed)*
+  - Connect `snowflake-connector-python` using `src/db.py`.
+  - Cache opportunity records with safe error handling and refresh controls.
+  - Derive application status from deadlines and separate from verification status.
+  - Handle empty Snowflake database (`OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`) gracefully.
+- [ ] **Phase 3: Real Opportunity Data & Snowflake CoCo Analytics**
+  - Ingest public datasets into Snowflake.
   - Utilize Snowflake CoCo to write, optimize, and test SQL queries.
   - Build automated aggregation views for deadline tracking and regional distribution.
 - [ ] **Phase 4: Open-Weight AI Assistant**
@@ -152,20 +150,23 @@ This tests:
 
 ```
 opportunitylens/
-├── app.py                   # Streamlit web application entry point
-├── requirements.txt         # Project dependencies
-├── .env.example             # Template environment variables (no secrets)
-├── .gitignore               # Git ignore rules for venv, secrets, and caches
-├── README.md                # Project documentation and setup instructions
-├── LICENSE                  # MIT License
+├── app.py                            # Streamlit web application entry point
+├── requirements.txt                  # Project dependencies
+├── .env.example                      # Template environment variables (no secrets)
+├── .gitignore                        # Git ignore rules for venv, secrets, and caches
+├── README.md                         # Project documentation and setup instructions
+├── LICENSE                           # MIT License
 ├── src/
-│   ├── __init__.py          # Package initializer
-│   ├── config.py            # Environment configuration with python-dotenv
-│   └── demo_data.py         # Fictional demo records and testable filter logic
+│   ├── __init__.py                   # Package initializer
+│   ├── config.py                     # Environment configuration with python-dotenv
+│   ├── db.py                         # Snowflake connector data access layer
+│   ├── demo_data.py                  # Fictional demo records and testable filter logic
+│   └── utils.py                      # Pure helper utilities (URL/date/category/metrics)
 ├── tests/
-│   └── test_demo_data.py    # Pytest test suite for data and filters
+│   ├── test_demo_data.py             # Pytest test suite for demo data and filters
+│   └── test_snowflake_integration.py # Pytest suite for Snowflake logic, dates, and URLs
 └── docs/
-    └── architecture.md      # Detailed system architecture and roadmap
+    └── architecture.md               # Detailed system architecture and roadmap
 ```
 
 ---
