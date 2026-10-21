@@ -17,9 +17,9 @@ This project is built iteratively across distinct phases to demonstrate:
 
 ---
 
-## 2. Phase 2 Architecture (Current State)
+## 2. Phase 3 Architecture (Current State)
 
-Phase 2 connects the application directly to the Snowflake data warehouse (`OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`), establishing the live data-access layer with connection pooling, caching, error sanitization, and automated fallback handling.
+Phase 3 introduces an automated, reproducible ingestion pipeline, data validation, idempotent Snowflake `MERGE` operations, and live analytical visualizations driven by SQL queries developed with **Snowflake CoCo (Cortex Code)**.
 
 ### Component Overview
 
@@ -27,21 +27,25 @@ Phase 2 connects the application directly to the Snowflake data warehouse (`OPPO
 graph TD
     User([Student / Applicant]) -->|Browser HTTP / WebSocket| StreamlitUI[Streamlit Application app.py]
     
+    subgraph Ingestion Pipeline Layer
+        RawData[(data/raw_opportunities.json)] --> IngestionCLI[CLI / Ingestion Pipeline src/ingestion/]
+        IngestionCLI --> Validator[Validator & Normalizer src/ingestion/validator.py]
+        Validator --> Dedup[In-Batch & Key Deduplicator]
+        Dedup -->|Parameterized MERGE| SnowflakeTable[(Snowflake OPPORTUNITIES Table)]
+    end
+
     subgraph UI & Caching Layer
         StreamlitUI --> Cache[@st.cache_data TTL 300s]
         Cache --> DBModule[Snowflake Access src/db.py]
+        StreamlitUI --> AnalyticsEngine[Analytics Engine src/analytics.py]
         StreamlitUI --> Utils[Helper Utilities src/utils.py]
-        StreamlitUI --> DemoData[Demo Data & Business Logic src/demo_data.py]
         StreamlitUI --> Config[Configuration Module src/config.py]
-        Config --> EnvFile[.env / Environment Variables]
+        DBModule -->|fetch_opportunities| SnowflakeTable
     end
 
-    subgraph Data Warehouse Layer
-        DBModule -->|fetch_opportunities| SnowflakeConn[(Snowflake OPPORTUNITYLENS_DB)]
-    end
-
-    subgraph Future Phase 3
-        SnowflakeCoCo[Snowflake CoCo SQL Engine] -.->|Phase 3 Pipeline| SnowflakeConn
+    subgraph Snowflake CoCo Analytical Layer
+        SnowsightCoCo[Snowflake CoCo / Cortex Code] -->|SQL Refinement| CoCoQueries[sql/04_coco_queries.sql]
+        CoCoQueries -.-> AnalyticsEngine
     end
 
     subgraph Future Phase 4
@@ -50,15 +54,21 @@ graph TD
     end
 ```
 
-### Modules in Phase 2
+### Modules in Phase 3
 
-- **`app.py`**: Streamlit frontend implementing the blue-and-white accessible UI, search and filtering controls, live opportunity cards, live metrics, and placeholder sections for AI and analytics.
-- **`src/db.py`**: Snowflake data-access layer utilizing `snowflake.connector` and `DictCursor` to query `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`. Implements `get_application_status()` to derive open/closing/closed status dynamically from deadlines.
-- **`src/utils.py`**: Testable helper functions for URL validation, date formatting, category derivation from active records, and metric aggregation.
-- **`src/config.py`**: Centralized configuration loader powered by `python-dotenv`.
-- **`src/demo_data.py`**: Fictional preview dataset, schema validation, and pure filter business logic.
-- **`tests/test_demo_data.py`**: Pytest test suite validating demo data integrity and filtering logic.
-- **`tests/test_snowflake_integration.py`**: Pytest suite validating deadline parsing, URL safety, date formatting, and live record filtering.
+- **`app.py`**: Streamlit frontend implementing the blue-and-white accessible UI, search and filtering controls, live opportunity cards, live metrics, and real-time Snowflake analytics (category, location, deadline timelines, and data freshness).
+- **`src/ingestion/`**: Automated data pipeline module containing:
+  - `models.py`: Data classes (`NormalizedOpportunity`, `ValidationResult`, `IngestionReport`).
+  - `validator.py`: Normalization of categories, dates, datetimes, and URLs, with strict rejection reasons.
+  - `pipeline.py`: File loaders, in-batch deduplication, and idempotent Snowflake `MERGE` execution.
+  - `cli.py`: Standalone CLI runner with `--input-file` and `--dry-run` modes.
+- **`src/analytics.py`**: Pure analytical functions computing category distributions, geographic breakdowns, application lifecycle windows, and verification metrics.
+- **`sql/`**: Version-controlled SQL scripts:
+  - `01_schema.sql`: Primary table DDL and documentation.
+  - `02_data_quality.sql`: Data quality audits and integrity checks.
+  - `03_analytics_queries.sql`: Analytical aggregations and lifecycle status.
+  - `04_coco_queries.sql`: Analytical queries developed and refined using Snowflake CoCo.
+- **`docs/snowflake_coco_workflow.md`**: Comprehensive walkthrough of CoCo prompts, generated SQL, human review, and factual Snowflake findings.
 
 ---
 
@@ -93,13 +103,14 @@ The Phase 1 in-memory schema is structured to map directly to the target Snowfla
 - Derived application status dynamically from deadlines and separated it from the database verification status.
 - Added empty-state handling distinguishing successful queries returning zero rows from connection failures.
 
-### Phase 3: Real Opportunity Data & Snowflake CoCo Analytics (Upcoming)
-- Leverage **Snowflake CoCo** (Cortex Code / Snowflake's intelligent assistant) to:
-  - Generate optimized aggregation queries for opportunity metrics and regional distribution.
-  - Formulate SQL data transformations for clean deduplication and status categorization (`Closing Soon` triggers).
-  - Power interactive visualizations in the analytics section of `app.py`.
+### Phase 3: Real Opportunity Data & Snowflake CoCo Analytics (Completed)
+- Built automated ingestion pipeline (`src/ingestion/`) with data validation, category/date normalization, and deduplication.
+- Seeded Snowflake with 13 genuine opportunities from authoritative Nigerian institutions (NITDA, PTDF, MTN Foundation, TotalEnergies, Federal Ministry of Education, etc.).
+- Implemented idempotent Snowflake `MERGE` logic ensuring repeated ingestion updates existing records without duplication.
+- Formulated and documented 7 analytical queries with **Snowflake CoCo (Cortex Code)** in `docs/snowflake_coco_workflow.md` and `sql/04_coco_queries.sql`.
+- Enhanced Streamlit dashboard with live interactive charts, location distribution, upcoming deadline tables, and data freshness metrics.
 
-### Phase 4: Open-Weight AI Assistant
+### Phase 4: Open-Weight AI Assistant (Upcoming)
 - Integrate an eligible open-weight model (such as `meta-llama/Llama-3.2-3B-Instruct`) hosted via **Hugging Face Inference Providers** using the OpenAI-compatible SDK.
 - Feed retrieved opportunity criteria into structured prompts so students can receive tailored eligibility checks and actionable application advice without hallucinations.
 

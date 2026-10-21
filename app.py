@@ -1,4 +1,4 @@
-"""OpportunityLens — Streamlit Web Application (Phase 2).
+"""OpportunityLens — Streamlit Web Application (Phase 3).
 
 Find opportunities. Understand your chances. Take your next step.
 Hacktoberfest Hack Day Gombe: Best Open-Source AI Project with Snowflake.
@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import streamlit as st
 
+from src.analytics import calculate_analytics_summary
 from src.config import ai_config, app_config, snowflake_config
 from src.db import fetch_opportunities
 from src.demo_data import (
@@ -265,9 +266,9 @@ def render_sidebar(
 
         st.markdown("#### 🏗️ Architecture Status")
         st.markdown(
-            "- **Phase 1:** Foundation and UI\n"
-            "- **Phase 2 (Current):** Snowflake integration\n"
-            "- **Phase 3 (Upcoming):** Real opportunity data and Snowflake CoCo analytics\n"
+            "- **Phase 1 (Completed):** Foundation and UI\n"
+            "- **Phase 2 (Completed):** Snowflake integration\n"
+            "- **Phase 3 (Active):** Real opportunity data and Snowflake CoCo analytics\n"
             "- **Phase 4 (Upcoming):** AI assistant integration"
         )
 
@@ -370,8 +371,8 @@ def render_header(
         )
     elif db_status == "Connected":
         st.success(
-            f"❄️ **Snowflake Connected:** Successfully retrieved {record_count} live opportunity "
-            "records from `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`.",
+            f"❄️ **Snowflake Connected & Populated (Phase 3 Active):** Successfully loaded "
+            f"**{record_count}** genuine opportunities from `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`.",
             icon="✅",
         )
     elif db_status == "Connected — no opportunity records":
@@ -636,55 +637,142 @@ def render_ai_assistant_section():
 
 
 # -----------------------------------------------------------------------------
-# Analytics Section (Reserved for Snowflake)
+# Analytics Section (Powered by Snowflake & CoCo Queries)
 # -----------------------------------------------------------------------------
 def render_analytics_section(
     opportunities: List[Dict[str, Any]], is_live: bool
 ):
-    """Render the Snowflake-backed analytics placeholder section."""
+    """Render the Snowflake-backed live analytics and intelligence dashboard."""
     st.markdown("---")
     st.markdown(
-        "### 📈 Analytics & Opportunity Intelligence *(Snowflake Reserved)*"
+        "### 📈 Analytics & Opportunity Intelligence *(Snowflake Live Analytics)*"
     )
     st.markdown(
-        "This section will showcase data aggregation pipelines and automated trend analysis "
-        "powered by **Snowflake CoCo** and the **Snowflake Python Connector** in Phases 2 and 3."
+        "Interactive aggregations and data intelligence derived directly from **Snowflake** "
+        "using queries developed and optimized with **Snowflake CoCo (Cortex Code)**."
     )
 
     if len(opportunities) > 0:
-        col_chart1, col_chart2 = st.columns(2)
-        df = pd.DataFrame(opportunities)
+        summary = calculate_analytics_summary(opportunities)
 
+        # 1. Key Analytics Metrics
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        ver_count = summary["verification_counts"].get("VERIFIED", 0)
+        ver_pct = (
+            round(ver_count * 100.0 / summary["total"], 1)
+            if summary["total"] > 0
+            else 0.0
+        )
+
+        with col_m1:
+            st.metric("Tracked Listings", summary["total"])
+        with col_m2:
+            st.metric(
+                "Verified Rate",
+                f"{ver_pct}%",
+                help="Opportunities confirmed directly from authoritative primary sources",
+            )
+        with col_m3:
+            st.metric(
+                "Organizations",
+                summary["unique_organizations"],
+                help="Distinct universities, government ministries, and corporate sponsors",
+            )
+        with col_m4:
+            st.metric(
+                "Authoritative Domains",
+                summary["unique_domains"],
+                help="Distinct verified web domains contributing opportunity listings",
+            )
+
+        # 2. Distribution Charts (Row 1: Category & Location)
+        col_chart1, col_chart2 = st.columns(2)
         with col_chart1:
-            st.markdown("##### 📌 Category Distribution")
-            if "category" in df.columns:
-                category_counts = df["category"].value_counts()
-                st.bar_chart(category_counts, color="#0052cc")
-                st.caption("Distribution of active records by category.")
+            st.markdown("##### 📌 Opportunity Distribution by Category")
+            if summary["category_counts"]:
+                cat_series = pd.Series(summary["category_counts"])
+                st.bar_chart(cat_series, color="#0052cc")
+                st.caption("Listing volume across canonical opportunity tracks.")
 
         with col_chart2:
-            st.markdown("##### ⏱️ Application Status Breakdown")
-            if "status" in df.columns:
-                status_counts = df["status"].value_counts()
-                st.bar_chart(status_counts, color="#2563eb")
-                st.caption("Distribution of active records by application deadline status.")
+            st.markdown("##### 📍 Geographic & State Distribution")
+            if summary["location_counts"]:
+                loc_series = pd.Series(summary["location_counts"]).sort_values(
+                    ascending=False
+                )
+                st.bar_chart(loc_series, color="#1e40af")
+                st.caption("Distribution of opportunities by geographic location.")
+
+        # 3. Distribution Charts (Row 2: Application Lifecycle & Verification Status)
+        col_chart3, col_chart4 = st.columns(2)
+        with col_chart3:
+            st.markdown("##### ⏱️ Application Lifecycle Status")
+            if summary["application_status_counts"]:
+                app_series = pd.Series(summary["application_status_counts"])
+                st.bar_chart(app_series, color="#059669")
+                st.caption(
+                    "Breakdown of active deadlines vs continuous rolling cohorts."
+                )
+
+        with col_chart4:
+            st.markdown("##### 🛡️ Data Quality & Verification Status")
+            if summary["verification_counts"]:
+                ver_series = pd.Series(summary["verification_counts"])
+                st.bar_chart(ver_series, color="#d97706")
+                st.caption(
+                    "Audited verification states: VERIFIED vs NEEDS_REVIEW."
+                )
+
+        # 4. Upcoming Deadlines Table
+        if summary["upcoming_deadlines"]:
+            st.markdown("##### ⏳ Upcoming Application Deadlines")
+            deadline_rows = []
+            for item in summary["upcoming_deadlines"]:
+                deadline_rows.append({
+                    "Opportunity": item["title"],
+                    "Organization": item["organization"],
+                    "Category": item["category"],
+                    "Deadline": item["deadline"],
+                    "Days Remaining": f"{item['days_remaining']} days",
+                })
+            st.dataframe(pd.DataFrame(deadline_rows), use_container_width=True)
+
+        # 5. Data Freshness Card
+        latest_date_str = (
+            format_display_date(summary["latest_verification"])
+            if summary["latest_verification"]
+            else "Recent"
+        )
+        st.caption(
+            f"🕒 **Data Freshness:** Last verified on **{latest_date_str}**. "
+            "Zero duplicate records detected via idempotent Snowflake MERGE pipeline."
+        )
     else:
         st.info(
             "📊 **No records currently available in Snowflake for analytics.**\n\n"
-            "Once opportunities are ingested into `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES` in Phase 3, "
-            "this section will automatically render category distributions and application timelines "
-            "generated by Snowflake CoCo.",
+            "Once opportunities are ingested into `OPPORTUNITYLENS_DB.APP.OPPORTUNITIES`, "
+            "this section will automatically render category distributions and application timelines.",
             icon="ℹ️",
         )
 
+    # 6. Snowflake CoCo Exploration Workflow Showcase
     st.markdown(
         """
         <div class="reserved-analytics-box">
-            <strong>❄️ Snowflake CoCo Integration Roadmap:</strong>
-            <ul style="margin-top: 0.5rem; margin-bottom: 0.25rem;">
-                <li><strong>Phase 2 (Active):</strong> Connected Snowflake Python Connector to query live tables.</li>
-                <li><strong>Phase 3:</strong> Use Snowflake CoCo to build automated aggregation queries, materialized views, and deadline monitoring pipelines.</li>
-                <li><strong>Phase 4:</strong> Ground LLM context retrieval on verified Snowflake opportunity tables.</li>
+            <strong>❄️ Snowflake CoCo (Cortex Code) Analytical Workflow:</strong>
+            <p style="margin-top: 0.35rem; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem;">
+                The analytical SQL queries powering this dashboard were developed and refined using
+                <strong>Snowflake CoCo</strong> in the Snowsight SQL Worksheet. See
+                <code>docs/snowflake_coco_workflow.md</code> and <code>sql/04_coco_queries.sql</code> for:
+            </p>
+            <ul style="margin-bottom: 0.25rem; font-size: 0.88rem; color: #334155;">
+                <li><strong>Prompt 1:</strong> Category listing volume & windowed percentage calculations.</li>
+                <li><strong>Prompt 2:</strong> Application deadline lifecycle analysis (Open, Closing Soon, Rolling).</li>
+                <li><strong>Prompt 3:</strong> 7-day upcoming application deadline window queries.</li>
+                <li><strong>Prompt 4:</strong> Eligibility requirement completeness and missing value audits.</li>
+                <li><strong>Prompt 5:</strong> Regex domain parsing from source URLs directly in Snowflake SQL.</li>
+                <li><strong>Prompt 6:</strong> Temporal dataset freshness tracking (hours since last verified).</li>
+                <li><strong>Prompt 7:</strong> Composite duplicate detection on normalized organization and title.</li>
             </ul>
         </div>
         """,

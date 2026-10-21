@@ -26,7 +26,7 @@ class AppConfig:
 
     APP_NAME: str = "OpportunityLens"
     APP_TAGLINE: str = "Find opportunities. Understand your chances. Take your next step."
-    APP_VERSION: str = "0.2.0-phase2"
+    APP_VERSION: str = "0.3.0-phase3"
     APP_ENV: str = os.getenv("APP_ENV", "development")
     DEBUG: bool = os.getenv("APP_DEBUG", "true").lower() in ("true", "1", "yes")
 
