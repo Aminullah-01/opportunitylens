@@ -136,8 +136,10 @@ def filter_opportunities(
     query: Optional[str] = None,
     category: Optional[str] = None,
     status: Optional[str] = None,
+    location: Optional[str] = None,
+    education_level: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Filter opportunity records by search keyword, category, and status.
+    """Filter opportunity records by search keyword, category, status, location, and education level.
 
     Pure function designed to be easily testable outside of Streamlit UI.
 
@@ -147,6 +149,8 @@ def filter_opportunities(
             organization, description, and location.
         category: Optional category filter. If 'All' or empty, category filter is skipped.
         status: Optional status filter. If 'All' or empty, status filter is skipped.
+        location: Optional location filter. If 'All' or empty, location filter is skipped.
+        education_level: Optional education level filter. If 'All' or empty, filter is skipped.
 
     Returns:
         Filtered list of opportunity dictionaries.
@@ -160,6 +164,24 @@ def filter_opportunities(
     # Filter by status
     if status and status != "All":
         filtered = [opp for opp in filtered if opp.get("status") == status]
+
+    # Filter by location
+    if location and location != "All":
+        loc_target = location.strip().lower()
+        filtered = [
+            opp
+            for opp in filtered
+            if loc_target in (opp.get("location") or "").lower()
+        ]
+
+    # Filter by education level
+    if education_level and education_level != "All":
+        edu_target = education_level.strip().lower()
+        filtered = [
+            opp
+            for opp in filtered
+            if edu_target in (opp.get("education_level") or "").lower()
+        ]
 
     # Filter by search query
     if query and query.strip():

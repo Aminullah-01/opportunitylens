@@ -1,0 +1,24 @@
+[theme]
+base = "light"
+primaryColor = "#2563eb"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#0f172a"
+borderColor = "#e2e8f0"
+font = "sans serif"
+
+[theme.sidebar]
+backgroundColor = "#f8fafc"
+secondaryBackgroundColor = "#f1f5f9"
+textColor = "#1e293b"
+
+[client]
+# Keep the interface product-focused: no deploy button or developer menu,
+# and never surface internal exception details in the browser.
+toolbarMode = "minimal"
+showErrorDetails = "none"
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = true

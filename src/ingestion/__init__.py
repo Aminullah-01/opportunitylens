@@ -10,6 +10,7 @@ from src.ingestion.models import (
 from src.ingestion.pipeline import (
     load_raw_records_from_file,
     run_ingestion_pipeline,
+    run_sources_ingestion,
     validate_and_deduplicate,
 )
 from src.ingestion.validator import validate_raw_record
@@ -24,4 +25,5 @@ __all__ = [
     "load_raw_records_from_file",
     "validate_and_deduplicate",
     "run_ingestion_pipeline",
+    "run_sources_ingestion",
 ]

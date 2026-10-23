@@ -1,0 +1,44 @@
+name: OpportunityLens CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Offline Tests & Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run automated test suite
+        run: |
+          pytest -v
+
+      - name: Verify clean application imports
+        run: |
+          python -c "from src.config import app_config, quality_config, monitoring_config; print('Config loaded successfully')"
+          python -c "import app; print('App loaded successfully')"
+
+      - name: Run offline system health check
+        run: |
+          python -m src.monitoring.cli --health --json
+
+      - name: Run operational quality audit runner (demo data)
+        run: |
+          python -m src.quality.runner --source demo --csv

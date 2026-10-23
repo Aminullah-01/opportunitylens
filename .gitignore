@@ -38,3 +38,10 @@ htmlcov/
 # Operating System files
 .DS_Store
 Thumbs.db
+
+# Generated audit and operational reports
+reports/
+*.lock
+
+# Local AI tooling (environment-specific symlinks)
+.agents/

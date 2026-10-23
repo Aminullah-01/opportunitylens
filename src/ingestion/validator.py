@@ -28,7 +28,7 @@ def normalize_category(category_input: Optional[str]) -> Optional[str]:
 
 
 def parse_date_value(val: Any) -> tuple[Optional[date], Optional[str]]:
-    """Parse date from date, datetime, or ISO string.
+    """Parse date from date, datetime, ISO string, or human-readable date.
 
     Returns:
         tuple of (parsed_date, error_message).
@@ -44,7 +44,16 @@ def parse_date_value(val: Any) -> tuple[Optional[date], Optional[str]]:
         try:
             return date.fromisoformat(val_str[:10]), None
         except (ValueError, TypeError):
-            return None, f"Invalid date format '{val}'; expected YYYY-MM-DD"
+            pass
+
+        try:
+            from dateutil import parser as dt_parser
+
+            parsed_dt = dt_parser.parse(val_str, fuzzy=True)
+            return parsed_dt.date(), None
+        except Exception:
+            return None, f"Invalid date format '{val}'; could not parse date."
+
     return None, f"Unsupported date type '{type(val).__name__}'"
 
 

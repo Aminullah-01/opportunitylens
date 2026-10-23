@@ -80,6 +80,24 @@ class IngestionReport:
     dry_run: bool = False
     rejection_details: List[Dict[str, Any]] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    source_summaries: List[Dict[str, Any]] = field(default_factory=list)
+    records: List[NormalizedOpportunity] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert report to dictionary representation for logging and exports."""
+        return {
+            "total_records": self.total_records,
+            "valid_records": self.valid_records,
+            "rejected_records": self.rejected_records,
+            "inserted": self.inserted,
+            "updated": self.updated,
+            "skipped": self.skipped,
+            "dry_run": self.dry_run,
+            "rejection_count": len(self.rejection_details),
+            "errors": self.errors,
+            "sources": self.source_summaries,
+            "collected_opportunity_ids": [r.opportunity_id for r in self.records],
+        }
 
     def summary_text(self) -> str:
         """Return formatted human-readable summary of ingestion metrics."""
@@ -93,6 +111,16 @@ class IngestionReport:
             f"Updated records:        {self.updated}",
             f"Skipped records:        {self.skipped}",
         ]
+        if self.source_summaries:
+            lines.append("\nSource Execution Breakdown:")
+            for s in self.source_summaries:
+                status_icon = "✓" if s.get("success") else "✗"
+                lines.append(
+                    f"  {status_icon} {s.get('source_name')} ({s.get('source_id')}): "
+                    f"{s.get('parsed_count', 0)} valid, {s.get('error_count', 0)} errors"
+                )
+                if s.get("error_message"):
+                    lines.append(f"    Notice: {s.get('error_message')}")
         if self.rejection_details:
             lines.append("\nRejection Details:")
             for item in self.rejection_details:
